@@ -1,10 +1,6 @@
 # ============================================================================
-# DVC pipeline DAG (rubric: "DVC DAG representing your CI pipeline")
-# ----------------------------------------------------------------------------
-# Three stages: ingest -> validate -> feature_engineer
-# Each stage tracks its inputs (deps), parameters, and outputs.
-# `dvc repro` re-runs only stages whose tracked inputs changed.
-# `dvc dag` renders the DAG visually (used in the Pipeline UI screen).
+# DVC pipeline DAG
+# ingest -> validate -> feature_engineer -> train
 # ============================================================================
 
 stages:
@@ -19,7 +15,7 @@ stages:
     outs:
       - data/raw/city_day.csv:
           cache: true
-          persist: true   # don't delete between runs
+          persist: true
 
   validate:
     cmd: python -m src.data.validate
@@ -49,3 +45,33 @@ stages:
           cache: true
       - data/processed/baseline_stats.json:
           cache: true
+      - data/processed/city_encoding.yaml:
+          cache: true
+
+  train_xgboost:
+    cmd: python -m src.models.xgboost_trainer
+    deps:
+      - src/models/xgboost_trainer.py
+      - src/models/dataset.py
+      - src/utils/config.py
+      - data/processed/features.parquet
+    params:
+      - train
+
+  train_nn:
+    cmd: python -m src.models.nn_trainer
+    deps:
+      - src/models/nn_trainer.py
+      - src/models/dataset.py
+      - src/utils/config.py
+      - data/processed/features.parquet
+    params:
+      - train
+
+  register_best:
+    cmd: python -m src.models.register
+    deps:
+      - src/models/register.py
+      - src/utils/config.py
+    params:
+      - train

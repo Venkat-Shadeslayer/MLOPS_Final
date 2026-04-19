@@ -39,10 +39,14 @@ with DAG(
     tags=["data", "aqi"],
 ) as dag:
 
+    def _ingest_wrapper():
+            """Discard the Path return so Airflow XCom can serialize."""
+            ingest()
+
     ingest_task = PythonOperator(
-        task_id="ingest_raw_csv",
-        python_callable=ingest,
-    )
+            task_id="ingest_raw_csv",
+            python_callable=_ingest_wrapper,
+        )
 
     validate_task = PythonOperator(
         task_id="validate_schema_and_quality",
