@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project data (DVC tracks these, Git doesn't)
+data/raw/*.csv
+data/processed/*.csv
+data/processed/*.parquet
+data/processed/*.json
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# MLflow local artifacts
+mlruns/
+mlartifacts/
+
+# Airflow runtime
+airflow/logs/*
+!airflow/logs/.gitkeep
+airflow/airflow.db
+airflow/airflow.cfg
+airflow/webserver_config.py
+airflow/standalone_admin_password.txt
+
+# Docker persistent volumes
+.docker-volumes/
+
+# Secrets — NEVER commit
+.env
+*.pem
+kaggle.json
+secrets/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Notebook scratch
+.ipynb_checkpoints/
+notebooks/scratch_*.ipynb
+
+# Model artifacts (DVC handles these)
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+!tests/fixtures/*.pkl
