@@ -12,8 +12,8 @@
       "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
       "id": 1,
-      "targets": [{"expr": "sum(rate(http_requests_total{service=\"inference\"}[5m]))", "refId": "A"}],
-      "title": "Inference requests/sec",
+      "targets": [{"expr": "sum(rate(aqi_predictions_total[1m]))", "legendFormat": "predictions/sec", "refId": "A"}],
+      "title": "Predictions/sec",
       "type": "timeseries"
     },
     {
@@ -21,25 +21,49 @@
       "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "id": 2,
-      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"inference\"}[5m])) by (le))", "refId": "A"}],
-      "title": "P95 latency",
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(aqi_prediction_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "A"},
+        {"expr": "histogram_quantile(0.50, sum(rate(aqi_prediction_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "B"}
+      ],
+      "title": "Prediction latency (p50, p95)",
       "type": "timeseries"
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
       "id": 3,
-      "targets": [{"expr": "sum(rate(http_requests_total{service=\"inference\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{service=\"inference\"}[5m]))", "refId": "A"}],
-      "title": "Error rate (5xx)",
+      "targets": [{"expr": "sum by (status) (rate(http_requests_total{handler=\"/predict\"}[1m]))", "legendFormat": "status {{status}}", "refId": "A"}],
+      "title": "Predict endpoint — requests/sec by status",
       "type": "timeseries"
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {}, "overrides": []},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
       "id": 4,
-      "targets": [{"expr": "aqi_rolling_rmse", "refId": "A"}],
+      "targets": [{"expr": "sum(aqi_predictions_total) by (model_version)", "legendFormat": "v{{model_version}}", "refId": "A"}],
+      "title": "Total predictions by model version",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(aqi_prediction_value_bucket[5m])) by (le))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum(rate(aqi_prediction_value_bucket[5m])) by (le))", "legendFormat": "p95", "refId": "B"}
+      ],
+      "title": "Predicted AQI distribution (p50, p95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "targets": [{"expr": "aqi_rolling_rmse", "legendFormat": "rolling RMSE (24h)", "refId": "A"}],
       "title": "Rolling RMSE (ground truth vs predicted)",
       "type": "timeseries"
     }
@@ -53,6 +77,6 @@
   "timezone": "",
   "title": "AQI API Overview",
   "uid": "aqi-api-overview",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

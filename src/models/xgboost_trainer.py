@@ -5,6 +5,10 @@ Why XGBoost: gradient-boosted trees are the strong baseline for structured
 tabular regression. We log everything via mlflow.xgboost.autolog() for
 reproducibility, then layer custom metrics (MAE, R^2) on top.
 
+IMPORTANT: We also explicitly call mlflow.xgboost.log_model() because
+autolog can silently skip model logging for xgboost 2.x due to
+_estimator_type introspection failures.
+
 Produces:
   - MLflow run with params, metrics, model artifact, feature importance
   - Returns the run_id so the registration step can locate it
@@ -16,8 +20,10 @@ from pathlib import Path
 import mlflow
 import mlflow.xgboost
 import numpy as np
+import pandas as pd
 import xgboost as xgb
 import yaml
+from mlflow.models.signature import infer_signature
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src.models.dataset import prepare_splits
@@ -56,11 +62,11 @@ def train() -> str:
 
     splits = prepare_splits()
 
-    # Enable autolog BEFORE start_run so it captures the fit() call
+    # Enable autolog BEFORE start_run so it captures the fit() call.
+    # We still call log_model explicitly below because autolog can skip it.
     mlflow.xgboost.autolog(log_input_examples=False, log_model_signatures=True)
 
     with mlflow.start_run(run_name="xgboost_baseline") as run:
-        # Tag this run as the xgboost variant — the register step filters on this
         mlflow.set_tag("model_family", "xgboost")
         mlflow.log_params({
             "feature_count": len(splits["feature_cols"]),
@@ -100,14 +106,32 @@ def train() -> str:
         mlflow.log_metrics(metrics)
         log.info("Metrics: %s", {k: round(v, 3) for k, v in metrics.items()})
 
-        # Log feature importance as an artifact (top 15)
+        # Feature importance (top 15)
         importance = dict(zip(splits["feature_cols"], model.feature_importances_))
         top15 = dict(sorted(importance.items(), key=lambda kv: -kv[1])[:15])
         mlflow.log_dict(top15, "top_15_feature_importance.json")
 
+        # Explicit model logging with proper named-column signature.
+        # This is what the inference API loads via models:/aqi_regressor/Production.
+        X_sample = pd.DataFrame(
+            splits["X_train"][:5], columns=splits["feature_cols"]
+        )
+        y_sample = model.predict(X_sample.to_numpy())
+        signature = infer_signature(X_sample, y_sample)
+
+        model._estimator_type = "regressor"
+
+        mlflow.xgboost.log_model(
+            xgb_model=model,
+            artifact_path="model",
+            signature=signature,
+            input_example=X_sample.head(2),
+        )
+        log.info("Logged model artifact at path='model'")
+
         log.info("XGBoost run complete. run_id=%s", run.info.run_id)
         return run.info.run_id
 
-
+    
 if __name__ == "__main__":
     train()
