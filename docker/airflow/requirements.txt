@@ -1,0 +1,12 @@
+# Versions deliberately unpinned where Airflow's constraints file should win.
+# Pin only where we need a specific minimum (mlflow, xgboost, kaggle, torch).
+mlflow==2.13.0
+xgboost==2.0.3
+kaggle==1.6.14
+torch==2.2.2
+psycopg2-binary
+pandas
+numpy
+scikit-learn
+pyarrow
+scipy

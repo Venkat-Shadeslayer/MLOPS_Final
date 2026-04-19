@@ -1,0 +1,51 @@
+# ============================================================================
+# DVC pipeline DAG (rubric: "DVC DAG representing your CI pipeline")
+# ----------------------------------------------------------------------------
+# Three stages: ingest -> validate -> feature_engineer
+# Each stage tracks its inputs (deps), parameters, and outputs.
+# `dvc repro` re-runs only stages whose tracked inputs changed.
+# `dvc dag` renders the DAG visually (used in the Pipeline UI screen).
+# ============================================================================
+
+stages:
+
+  ingest:
+    cmd: python -m src.data.ingest
+    deps:
+      - src/data/ingest.py
+      - src/utils/config.py
+    params:
+      - ingest
+    outs:
+      - data/raw/city_day.csv:
+          cache: true
+          persist: true   # don't delete between runs
+
+  validate:
+    cmd: python -m src.data.validate
+    deps:
+      - src/data/validate.py
+      - src/utils/config.py
+      - data/raw/city_day.csv
+    params:
+      - validate
+    outs:
+      - data/processed/validation_report.json:
+          cache: true
+
+  feature_engineer:
+    cmd: python -m src.features.transform
+    deps:
+      - src/features/transform.py
+      - src/features/baseline_stats.py
+      - src/utils/config.py
+      - data/raw/city_day.csv
+      - data/processed/validation_report.json
+    params:
+      - features
+      - baseline
+    outs:
+      - data/processed/features.parquet:
+          cache: true
+      - data/processed/baseline_stats.json:
+          cache: true

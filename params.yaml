@@ -1,0 +1,73 @@
+# ============================================================================
+# Single source of truth for all pipeline parameters.
+# Read by both DVC (for stage param tracking) and Python modules at runtime.
+# Changing any value invalidates the cache for stages that depend on it.
+# ============================================================================
+
+ingest:
+  kaggle_dataset: "rohanrao/air-quality-data-in-india"
+  raw_csv_filename: "city_day.csv"
+
+validate:
+  required_columns:
+    - City
+    - Date
+    - PM2.5
+    - PM10
+    - "NO"
+    - NO2
+    - NOx
+    - NH3
+    - CO
+    - SO2
+    - O3
+    - Benzene
+    - Toluene
+    - Xylene
+    - AQI
+  max_missing_pct_per_column: 0.5   # drop column if >50% missing
+  min_rows_required: 1000           # fail validation below this
+  target_column: AQI
+  date_column: Date
+  city_column: City
+
+features:
+  pollutant_columns:
+    - PM2.5
+    - PM10
+    - "NO"
+    - NO2
+    - NOx
+    - NH3
+    - CO
+    - SO2
+    - O3
+    - Benzene
+    - Toluene
+    - Xylene
+  lag_days: [1, 2, 3, 7]            # build t-1, t-2, t-3, t-7 for each pollutant
+  rolling_windows: [3, 7, 14]       # 3-day, 7-day, 14-day rolling means
+  city_encoding: target              # 'target' | 'onehot' | 'frequency'
+  imputation_strategy: median        # how to fill missing values per city
+
+baseline:
+  # Used by drift detection in Day 5 — compute on training data, store as JSON
+  num_psi_bins: 10                  # bins for Population Stability Index
+
+train:
+  test_size: 0.15
+  val_size: 0.15
+  random_seed: 42
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.9
+    colsample_bytree: 0.9
+  nn:
+    hidden_dims: [64, 32]
+    dropout: 0.2
+    lr: 0.001
+    batch_size: 256
+    epochs: 50
+    early_stopping_patience: 5

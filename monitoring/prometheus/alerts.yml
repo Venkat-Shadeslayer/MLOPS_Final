@@ -1,0 +1,52 @@
+# Per second PDF: alert on error_rate > 5% or drift detected.
+groups:
+  - name: aqi_api_health
+    interval: 30s
+    rules:
+      - alert: HighInferenceErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{service="inference", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="inference"}[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Inference API error rate >5%"
+          description: "5xx error rate has exceeded 5% over the last 5 minutes."
+
+      - alert: HighInferenceLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="inference"}[5m])) by (le)
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 inference latency >200ms"
+          description: "Per spec, business metric requires inference latency < 200ms."
+
+  - name: aqi_model_quality
+    interval: 60s
+    rules:
+      - alert: ModelDriftDetected
+        expr: aqi_feature_psi > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Feature drift detected (PSI > 0.2)"
+          description: "Population Stability Index for one or more features has crossed the drift threshold."
+
+      - alert: ModelPerformanceDecay
+        expr: aqi_rolling_rmse > 15.0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rolling RMSE has crossed retraining threshold"
+          description: "Rolling 24h RMSE > 15 — retraining DAG should fire automatically."
