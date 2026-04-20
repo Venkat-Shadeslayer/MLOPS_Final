@@ -205,6 +205,14 @@ services:
       - "3001:3000"
     networks: [ mlops_net ]
 
+  pushgateway:
+    image: prom/pushgateway:v1.8.0
+    container_name: mlops_pushgateway
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+    networks: [ mlops_net ]
+
 volumes:
   postgres_data:
   mlflow_artifacts:

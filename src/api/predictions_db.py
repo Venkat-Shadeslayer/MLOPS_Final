@@ -28,7 +28,7 @@ from typing import Optional
 
 from sqlalchemy import Column, DateTime, Float, String, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from src.utils.config import db_config
 from src.utils.logging import get_logger
@@ -36,8 +36,7 @@ from src.utils.logging import get_logger
 log = get_logger(__name__)
 
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 
 class Prediction(Base):
