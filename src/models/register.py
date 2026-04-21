@@ -33,7 +33,7 @@ def latest_run_for_family(client: MlflowClient, experiment_id: str, family: str)
     """Return the most recent run tagged model_family=<family>."""
     runs = client.search_runs(
         experiment_ids=[experiment_id],
-        filter_string=f"tags.model_family = '{family}'",
+        filter_string=f"tags.model_family = '{family}' and attributes.status = 'FINISHED'",
         order_by=["attribute.start_time DESC"],
         max_results=1,
     )

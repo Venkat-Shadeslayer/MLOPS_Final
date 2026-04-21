@@ -33,6 +33,23 @@ default_args = {
 
 def _decay_or_skip(**context) -> str:
     """Branch function: returns next task_id."""
+    from airflow.models import DagRun
+    from datetime import datetime, timedelta, timezone
+
+    now_utc = datetime.now(timezone.utc)
+    # Cooldown: skip if training_pipeline ran in last hour
+    recent = DagRun.find(
+        dag_id="training_pipeline",
+        execution_start_date=now_utc - timedelta(hours=1),
+    )
+    if recent:
+        last_dates = [r.start_date for r in recent if r.start_date]
+        if last_dates:
+            last = max(last_dates)
+            if last > now_utc - timedelta(hours=1):
+                print(f"Cooldown active — last retrain at {last}")
+                return "no_retrain_needed"
+
     decision = check_decay()
     context["ti"].xcom_push(key="decay_decision", value=decision)
     return "trigger_retrain" if decision["should_retrain"] else "no_retrain_needed"

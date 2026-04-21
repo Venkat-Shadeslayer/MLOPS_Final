@@ -115,6 +115,7 @@ services:
       - ./data:/opt/airflow/data
       - ./params.yaml:/opt/airflow/params.yaml:ro
       - ~/.kaggle:/home/airflow/.kaggle:ro
+      - mlflow_artifacts:/mlflow/artifacts
     ports:
       - "8080:8080"
     healthcheck:

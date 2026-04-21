@@ -160,7 +160,7 @@ def run_one_batch(inject_drift: bool = False, max_rows: int = MAX_READINGS_PER_R
                 for col in POLLUTANT_FEATURES:
                     if col in reading and pd.notna(reading[col]):
                         reading[col] = float(reading[col]) * (1.5 + random.random())
-                actual = actual * 0.5  # intentional mismatch
+                actual = actual +300  # intentional mismatch
 
             pred_id, pred_aqi = submit_prediction(reading)
             submit_ground_truth(pred_id, actual)
