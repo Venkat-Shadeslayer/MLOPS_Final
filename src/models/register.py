@@ -13,10 +13,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import mlflow
 import yaml
 from mlflow.tracking import MlflowClient
 
+import mlflow
 from src.utils.config import mlflow_config
 from src.utils.logging import get_logger
 

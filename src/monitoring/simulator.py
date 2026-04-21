@@ -17,13 +17,11 @@ from __future__ import annotations
 import json
 import os
 import random
-import time
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 import requests
-from sqlalchemy import Column, DateTime, Integer, String, create_engine, text
+from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from src.utils.config import (

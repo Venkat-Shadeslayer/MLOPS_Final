@@ -21,10 +21,8 @@ This table drives:
 """
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import Column, DateTime, Float, String, create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -106,7 +104,7 @@ def record_ground_truth(prediction_id: str, actual_aqi: float) -> bool:
         return True
 
 
-def rolling_rmse(window_hours: int = 24) -> Optional[float]:
+def rolling_rmse(window_hours: int = 24) -> float | None:
     """Compute RMSE over predictions in the window that have ground truth."""
     sql = text(
         """

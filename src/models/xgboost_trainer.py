@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import mlflow
 import mlflow.xgboost
 import numpy as np
 import pandas as pd
@@ -26,6 +25,7 @@ import yaml
 from mlflow.models.signature import infer_signature
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+import mlflow
 from src.models.dataset import prepare_splits
 from src.utils.config import mlflow_config
 from src.utils.logging import get_logger
@@ -107,7 +107,7 @@ def train() -> str:
         log.info("Metrics: %s", {k: round(v, 3) for k, v in metrics.items()})
 
         # Feature importance (top 15)
-        importance = dict(zip(splits["feature_cols"], model.feature_importances_))
+        importance = dict(zip(splits["feature_cols"], model.feature_importances_, strict=False))
         top15 = dict(sorted(importance.items(), key=lambda kv: -kv[1])[:15])
         mlflow.log_dict(top15, "top_15_feature_importance.json")
 
@@ -132,6 +132,6 @@ def train() -> str:
         log.info("XGBoost run complete. run_id=%s", run.info.run_id)
         return run.info.run_id
 
-    
+
 if __name__ == "__main__":
     train()

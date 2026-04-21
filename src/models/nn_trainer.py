@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import mlflow
 import mlflow.pytorch
 import numpy as np
 import torch
@@ -22,6 +21,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
+import mlflow
 from src.models.dataset import prepare_splits
 from src.utils.config import mlflow_config
 from src.utils.logging import get_logger

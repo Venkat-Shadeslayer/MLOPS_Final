@@ -21,7 +21,9 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pandas numpy scikit-learn
+          pip install ruff pytest pandas numpy scikit-learn \
+            prometheus_client sqlalchemy psycopg2-binary mlflow pyyaml \
+            xgboost fastapi pydantic pydantic-settings
           pip install -e .
 
       - name: Lint with ruff

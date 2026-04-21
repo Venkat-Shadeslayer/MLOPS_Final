@@ -94,10 +94,10 @@ def build_feature_row(req: PredictionRequest, feature_cols: list[str]) -> pd.Dat
     production system these would come from a feature store.
     """
     current = req.reading.model_dump(by_alias=True)
-    row = {col: 0.0 for col in feature_cols}
+    row = dict.fromkeys(feature_cols, 0.0)
 
     # Fill current pollutant values
-    for alias_key, canonical in POLLUTANT_ALIASES.items():
+    for _alias_key, canonical in POLLUTANT_ALIASES.items():
         val = current.get(canonical)
         if val is not None and canonical in row:
             row[canonical] = float(val)
@@ -153,7 +153,7 @@ async def predict(req: PredictionRequest):
         pred = model_loader.predict(features_df)
     except Exception as e:
         log.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail=f"Inference error: {e}")
+        raise HTTPException(status_code=500, detail=f"Inference error: {e}") from e
 
     latency_s = time.perf_counter() - start
     latency_ms = latency_s * 1000
