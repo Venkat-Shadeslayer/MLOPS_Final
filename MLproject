@@ -1,0 +1,43 @@
+name: aqi_mlops
+
+docker_env:
+  image: mlops_api
+
+entry_points:
+
+  ingest:
+    command: "python -m src.data.ingest"
+
+  validate:
+    command: "python -m src.data.validate"
+
+  feature_engineer:
+    command: "python -m src.features.transform"
+
+  train_xgboost:
+    command: "python -m src.models.xgboost_trainer"
+
+  train_nn:
+    command: "python -m src.models.nn_trainer"
+
+  register_best:
+    command: "python -m src.models.register"
+
+  drift_check:
+    command: "python -m src.monitoring.drift"
+
+  decay_check:
+    command: "python -m src.monitoring.decay_check"
+
+  rebuild_with_feedback:
+    command: "python -m src.features.feedback_merge"
+
+  # Full pipeline end-to-end
+  main:
+    command: |
+      python -m src.data.ingest && \
+      python -m src.data.validate && \
+      python -m src.features.transform && \
+      python -m src.models.xgboost_trainer && \
+      python -m src.models.nn_trainer && \
+      python -m src.models.register

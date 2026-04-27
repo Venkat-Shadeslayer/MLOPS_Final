@@ -1,0 +1,71 @@
+%% AQI MLOps — system architecture (render with any Mermaid tool, e.g. mermaid.live)
+flowchart LR
+    subgraph User
+        U[Analyst / Operator]
+    end
+
+    subgraph Frontend["Streamlit multipage UI :8501"]
+        FH[Home]
+        FP[Predict]
+        FF[Feedback]
+        FPL[Pipeline console]
+    end
+
+    subgraph Serving["Inference layer"]
+        API[FastAPI :8000<br/>/predict /feedback /stats<br/>/metrics]
+    end
+
+    subgraph Orchestration["Airflow :8080"]
+        DP[data_pipeline DAG]
+        TP[training_pipeline DAG]
+        DM[drift_monitor DAG]
+    end
+
+    subgraph Tracking["MLflow :5001"]
+        EXP[Experiments]
+        REG[Model Registry<br/>aqi_regressor Prod/Archived]
+    end
+
+    subgraph Storage
+        PG[(Postgres<br/>predictions + metadata)]
+        ART[(MLflow artifacts<br/>shared volume)]
+        RAW[(data/raw, data/features)]
+    end
+
+    subgraph Observability
+        PROM[Prometheus :9090]
+        GRAF[Grafana :3001]
+        PUSH[Pushgateway :9091]
+    end
+
+    U --> FH
+    FH --> FP
+    FH --> FF
+    FH --> FPL
+    FP -->|REST| API
+    FF -->|REST| API
+    FPL -->|REST| API
+    FPL -.iframe.-> Orchestration
+    FPL -.iframe.-> Tracking
+    FPL -.iframe.-> GRAF
+
+    API --> PG
+    API --> REG
+    API -->|scraped| PROM
+
+    DP --> RAW
+    DP --> PG
+    TP --> RAW
+    TP -->|merges feedback| PG
+    TP --> EXP
+    TP --> REG
+    DM --> PG
+    DM -->|push metrics| PUSH
+    DM -->|trigger on drift/RMSE+count| TP
+
+    REG --> API
+    ART -.shared.-> API
+    ART -.shared.-> TP
+
+    PROM --> GRAF
+    PUSH --> PROM

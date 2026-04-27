@@ -34,11 +34,14 @@ from src.api.instrumentation import (
 )
 from src.api.model_loader import model_loader
 from src.api.predictions_db import (
+    feedback_count,
     init_db,
     insert_prediction,
+    list_feedback,
     record_ground_truth,
     rolling_rmse,
 )
+from src.utils.config import drift_config
 from src.api.schemas import (
     GroundTruthSubmission,
     HealthResponse,
@@ -199,5 +202,88 @@ async def submit_ground_truth(payload: GroundTruthSubmission):
 
 @app.get("/stats", tags=["feedback"])
 async def stats():
-    rmse = rolling_rmse(window_hours=24)
-    return {"rolling_rmse_24h": rmse}
+    """Rolling RMSE + feedback count + retrain-trigger config.
+
+    Feedback-based retrain fires when feedback_count >= feedback_count_threshold
+    AND rolling_rmse > rmse_threshold (within the window).
+    """
+    window = drift_config.check_window_hours
+    rmse = rolling_rmse(window_hours=window)
+    count = feedback_count(window_hours=window)
+    return {
+        "rolling_rmse_24h": rmse,
+        "feedback_count_window": count,
+        "window_hours": window,
+        "feedback_count_threshold": drift_config.feedback_count_threshold,
+        "rmse_threshold": drift_config.rmse_threshold,
+        "psi_threshold": drift_config.psi_threshold,
+        "count_gate_met": count >= drift_config.feedback_count_threshold,
+        "rmse_gate_met": rmse is not None and rmse > drift_config.rmse_threshold,
+    }
+
+
+@app.get("/feedback", tags=["feedback"])
+async def feedback_list(limit: int = 500):
+    """Return recent feedback rows (predictions with actual_aqi)."""
+    rows = list_feedback(limit=limit)
+    # Stringify non-JSON types for the wire
+    out = []
+    for r in rows:
+        out.append({
+            "prediction_id": str(r["id"]),
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "feedback_at": r["feedback_at"].isoformat() if r["feedback_at"] else None,
+            "model_version": r["model_version"],
+            "model_family": r["model_family"],
+            "predicted_aqi": r["predicted_aqi"],
+            "actual_aqi": r["actual_aqi"],
+            "error": r["actual_aqi"] - r["predicted_aqi"],
+            "abs_error": abs(r["actual_aqi"] - r["predicted_aqi"]),
+            "latency_ms": r["latency_ms"],
+            "city": (r["input_features"] or {}).get("city"),
+            "date": (r["input_features"] or {}).get("date"),
+        })
+    return {"count": len(out), "rows": out}
+
+
+@app.get("/feedback.csv", tags=["feedback"])
+async def feedback_csv(limit: int = 10000):
+    """Download all feedback rows as CSV (for audit / external analysis)."""
+    import csv
+    import io
+
+    from fastapi.responses import StreamingResponse
+
+    rows = list_feedback(limit=limit)
+    buf = io.StringIO()
+    fieldnames = [
+        "prediction_id", "created_at", "feedback_at",
+        "model_version", "model_family",
+        "city", "date",
+        "predicted_aqi", "actual_aqi", "error", "abs_error",
+        "latency_ms",
+    ]
+    writer = csv.DictWriter(buf, fieldnames=fieldnames)
+    writer.writeheader()
+    for r in rows:
+        feat = r["input_features"] or {}
+        writer.writerow({
+            "prediction_id": str(r["id"]),
+            "created_at": r["created_at"].isoformat() if r["created_at"] else "",
+            "feedback_at": r["feedback_at"].isoformat() if r["feedback_at"] else "",
+            "model_version": r["model_version"],
+            "model_family": r["model_family"],
+            "city": feat.get("city", ""),
+            "date": feat.get("date", ""),
+            "predicted_aqi": r["predicted_aqi"],
+            "actual_aqi": r["actual_aqi"],
+            "error": r["actual_aqi"] - r["predicted_aqi"],
+            "abs_error": abs(r["actual_aqi"] - r["predicted_aqi"]),
+            "latency_ms": r["latency_ms"],
+        })
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=feedback.csv"},
+    )

@@ -117,3 +117,33 @@ def rolling_rmse(window_hours: int = 24) -> float | None:
     with get_session() as s:
         result = s.execute(sql, {"hours": window_hours}).scalar()
         return float(result) if result is not None else None
+
+
+def feedback_count(window_hours: int = 24) -> int:
+    """Count feedback rows (actual_aqi set) within the window."""
+    sql = text(
+        """
+        SELECT COUNT(*) FROM predictions
+        WHERE actual_aqi IS NOT NULL
+          AND feedback_at > NOW() - (:hours || ' hours')::interval
+        """
+    )
+    with get_session() as s:
+        return int(s.execute(sql, {"hours": window_hours}).scalar() or 0)
+
+
+def list_feedback(limit: int = 500) -> list[dict]:
+    """List recent rows with ground truth. Newest first. Used by /feedback UI."""
+    sql = text(
+        """
+        SELECT id, created_at, feedback_at, model_version, model_family,
+               predicted_aqi, actual_aqi, latency_ms, input_features
+        FROM predictions
+        WHERE actual_aqi IS NOT NULL
+        ORDER BY feedback_at DESC
+        LIMIT :lim
+        """
+    )
+    with get_session() as s:
+        rows = s.execute(sql, {"lim": limit}).mappings().all()
+    return [dict(r) for r in rows]

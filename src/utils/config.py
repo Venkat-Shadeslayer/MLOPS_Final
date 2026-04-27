@@ -70,10 +70,14 @@ class DatabaseConfig:
 # ----------------------------------------------------------------------------
 @dataclass(frozen=True)
 class DriftConfig:
-    rmse_threshold: float = float(os.getenv("DRIFT_RMSE_THRESHOLD", "15.0"))
+    rmse_threshold: float = float(os.getenv("DRIFT_RMSE_THRESHOLD", "100.0"))
     error_rate_threshold: float = float(os.getenv("DRIFT_ERROR_RATE_THRESHOLD", "0.05"))
     check_window_hours: int = int(os.getenv("DRIFT_CHECK_WINDOW_HOURS", "24"))
     psi_threshold: float = float(os.getenv("DRIFT_PSI_THRESHOLD", "0.2"))
+    # Count-based retrain gate: require at least this many feedback rows in
+    # the window before RMSE is trusted as a retraining signal. Avoids a
+    # single outlier feedback triggering an expensive retrain.
+    feedback_count_threshold: int = int(os.getenv("FEEDBACK_COUNT_THRESHOLD", "10"))
 
 
 # ----------------------------------------------------------------------------

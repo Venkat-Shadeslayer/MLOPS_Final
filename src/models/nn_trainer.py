@@ -10,6 +10,7 @@ Includes early stopping to avoid overfitting.
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import mlflow.pytorch
@@ -25,6 +26,7 @@ import mlflow
 from src.models.dataset import prepare_splits
 from src.utils.config import mlflow_config
 from src.utils.logging import get_logger
+from src.utils.mlflow_helpers import log_run_provenance
 
 log = get_logger(__name__)
 
@@ -114,7 +116,13 @@ def train() -> str:
     mlflow.set_experiment(t["mlflow_experiment"])
 
     with mlflow.start_run(run_name="nn_baseline") as run:
-        mlflow.set_tag("model_family", "pytorch_nn")
+        dataset_rows = splits["train_size"] + splits["val_size"] + splits["test_size"]
+        log_run_provenance(
+            model_family="pytorch_nn",
+            dataset_rows=dataset_rows,
+            feature_count=len(splits["feature_cols"]),
+            extra_tags={"device": str(device)},
+        )
         mlflow.log_params({
             "feature_count": len(splits["feature_cols"]),
             "train_size": splits["train_size"],
@@ -122,6 +130,7 @@ def train() -> str:
             "test_size": splits["test_size"],
             **{f"nn_{k}": v for k, v in nn_params.items()},
         })
+        _t0 = time.perf_counter()
 
         model = MLPRegressor(
             input_dim=X_train.shape[1],
@@ -183,6 +192,7 @@ def train() -> str:
         final_metrics.update(regression_metrics(y_tr_true, y_tr_pred, "train"))
         final_metrics.update(regression_metrics(y_va_true, y_va_pred, "val"))
         final_metrics.update(regression_metrics(y_te_true, y_te_pred, "test"))
+        final_metrics["training_time_s"] = time.perf_counter() - _t0
         mlflow.log_metrics(final_metrics)
         log.info("Metrics: %s", {k: round(v, 3) for k, v in final_metrics.items()})
 

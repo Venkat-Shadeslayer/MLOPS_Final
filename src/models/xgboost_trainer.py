@@ -15,6 +15,7 @@ Produces:
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import mlflow.xgboost
@@ -29,6 +30,7 @@ import mlflow
 from src.models.dataset import prepare_splits
 from src.utils.config import mlflow_config
 from src.utils.logging import get_logger
+from src.utils.mlflow_helpers import log_run_provenance
 
 log = get_logger(__name__)
 
@@ -67,13 +69,19 @@ def train() -> str:
     mlflow.xgboost.autolog(log_input_examples=False, log_model_signatures=True)
 
     with mlflow.start_run(run_name="xgboost_baseline") as run:
-        mlflow.set_tag("model_family", "xgboost")
+        dataset_rows = splits["train_size"] + splits["val_size"] + splits["test_size"]
+        log_run_provenance(
+            model_family="xgboost",
+            dataset_rows=dataset_rows,
+            feature_count=len(splits["feature_cols"]),
+        )
         mlflow.log_params({
             "feature_count": len(splits["feature_cols"]),
             "train_size": splits["train_size"],
             "val_size": splits["val_size"],
             "test_size": splits["test_size"],
         })
+        _t0 = time.perf_counter()
 
         model = xgb.XGBRegressor(
             n_estimators=xgb_params["n_estimators"],
@@ -103,6 +111,7 @@ def train() -> str:
             y_pred = model.predict(X)
             metrics.update(evaluate(y, y_pred, split_name))
 
+        metrics["training_time_s"] = time.perf_counter() - _t0
         mlflow.log_metrics(metrics)
         log.info("Metrics: %s", {k: round(v, 3) for k, v in metrics.items()})
 

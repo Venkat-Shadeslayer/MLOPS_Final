@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+from src.features.feedback_merge import rebuild_features_with_feedback
 from src.models.nn_trainer import train as train_nn
 from src.models.register import register_best
 from src.models.xgboost_trainer import train as train_xgb
@@ -36,6 +37,11 @@ with DAG(
     tags=["training", "aqi"],
 ) as dag:
 
+    rebuild_features_task = PythonOperator(
+        task_id="rebuild_features_with_feedback",
+        python_callable=rebuild_features_with_feedback,
+    )
+
     train_xgb_task = PythonOperator(
         task_id="train_xgboost",
         python_callable=train_xgb,
@@ -51,5 +57,5 @@ with DAG(
         python_callable=register_best,
     )
 
-    # XGB and NN run in parallel, register waits for both
-    [train_xgb_task, train_nn_task] >> register_task
+    # rebuild_features -> parallel training -> register winner
+    rebuild_features_task >> [train_xgb_task, train_nn_task] >> register_task
