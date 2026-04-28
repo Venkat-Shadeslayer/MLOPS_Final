@@ -18,6 +18,22 @@ retraining driven by real-world feedback.
 | Ops | Drift detection cadence | ≤ 10 min |
 | Ops | Closed-loop retrain trigger | automatic, threshold-based |
 
+## 2a. High-level flowchart
+
+The following flowchart traces a single record through the full system — from
+raw Kaggle ingestion through training, registry promotion, online inference,
+feedback capture, drift monitoring, and the closed-loop retraining trigger.
+
+![High-level design flowchart of the AQI MLOps system.](../../screenshots/hld_flowchart.png)
+
+The drift monitor reads from the same Postgres table that the API writes to.
+Either of two independent conditions — the joint **count + rolling-RMSE** gate
+or the **PSI** gate against the feature baseline — fans back into the training
+DAG. The Prometheus → Grafana → Mailtrap path on the right is the operator-facing
+observability surface; the Streamlit → FastAPI path on the left is the
+end-user-facing surface. Both surfaces share state only through the Postgres
+`predictions` table.
+
 ## 3. Design choices and rationale
 
 ### 3.1 Two model families (XGBoost + PyTorch NN)

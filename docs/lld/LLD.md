@@ -2,6 +2,23 @@
 
 Endpoint spec, I/O contracts, data models, and module layout.
 
+## 0. Request-flow overview
+
+The flowchart below traces a single `POST /predict` call through input
+validation, the cached `ModelLoader` singleton, the registry-backed model
+artifact, feature transformation, persistence, and instrumentation, and then
+traces the corresponding `POST /ground-truth` call through to its effect on
+the rolling-RMSE gate consumed by the Airflow `drift_monitor` DAG.
+
+![Low-level design flowchart of the inference, feedback, and decay-check paths.](../../screenshots/lld_flowchart.png)
+
+The diagram surfaces two design choices echoed in the HLD: the `ModelLoader`
+is a singleton so registry lookups are amortized across requests, and the
+drift monitor is decoupled from the API entirely — it shares state only
+through the Postgres `predictions` table. This keeps the synchronous
+inference path fast and observable in isolation while still allowing the
+asynchronous retraining loop to react to live ground-truth feedback.
+
 ## 1. REST API — FastAPI (`src/api/main.py`)
 
 Base URL: `http://api:8000` (container) / `http://localhost:8000` (host).
