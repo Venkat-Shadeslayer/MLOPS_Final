@@ -14,73 +14,80 @@ structuring.
 
 The following prompts were used during the course of this assignment:
 
-- "get the full picture of the AQI MLOps assignment and help me plan the
-  whole pipeline end to end".
-- "give me the kaggle command to download the city_day air quality dataset".
-- "dvc remote — should i use a local remote for this assignment or push to
-  gdrive?"
-- "write me the scaffolding for ingest.py that pulls from kaggle and writes
-  to data/raw/city_day.csv"
-- "write validate.py that does schema and missingness checks and emits a
-  validation_report.json"
-- "write transform.py that does imputation, lag features, rolling means, and
-  target encoding for city"
-- "write baseline_stats.py that stores per-feature means/variances for drift
-  comparison later"
-- "write xgboost_trainer.py that logs to MLflow with model_family and
-  git_sha tags"
-- "write nn_trainer.py — a small PyTorch MLP, also logged to MLflow"
-- "write register.py that picks the lower val_rmse run across both families
-  and promotes to Production, archives the previous version"
-- "write the FastAPI main.py with /health, /ready, /predict, /ground-truth,
-  /stats, /feedback, /feedback.csv, /metrics"
-- "ModelLoader should be a singleton — show me the cleanest way to do that
-  in FastAPI"
-- "write predictions_db.py with SQLAlchemy ORM for the predictions table"
-- "write drift.py that computes PSI per feature against the baseline"
-- "write decay_check.py with the count-AND-RMSE gate plus PSI gate"
-- "write feedback_merge.py that pulls actual_aqi rows from postgres and
-  merges them back into the raw CSV before retraining"
-- "write the data_pipeline DAG: ingest → validate → feature_engineer"
-- "write the training_pipeline DAG: rebuild_features_with_feedback →
-  [train_xgboost ∥ train_pytorch_nn] → register_best_model"
-- "write the drift_monitor DAG with TriggerDagRunOperator and a 1-hour
-  cooldown"
-- "write the streamlit pages — Home, Predict, Feedback, Pipeline — with a
-  thin api_client.py wrapper"
-- "write docker-compose.yml with api, frontend, airflow, mlflow, postgres,
-  prometheus, grafana, pushgateway"
-- "API container can't reach mlflow — what's the right service name and
-  port to use?"
-- "MLflow artifact_root is broken inside the container — how do i fix the
-  named volume mount?"
-- "_git_sha is throwing PermissionError inside the airflow container — how
-  do i make it fall back gracefully when git isn't available?"
-- "Airflow email_on_failure isn't sending — how do i wire mailtrap as the
-  SMTP backend?"
-- "write a tiny _smtp_test DAG that intentionally raises so i can verify
-  mailtrap actually receives the alert"
-- "write prometheus_fastapi_instrumentator setup with custom gauges for
-  rolling_rmse_24h and predictions_total by model_version"
-- "write the prometheus alert rules for HighInferenceLatencyP95 and
-  ModelDriftDetected"
-- "write a Grafana dashboard JSON that shows predictions/sec, latency,
-  rolling RMSE, and predictions by model version"
-- "write the unit tests for transform.py, drift.py, and dataset.py"
-- "write the integration tests that hit the live /predict and /ground-truth
-  endpoints"
-- "write the architecture diagram description and the HLD with success
-  metrics, design choices, NFRs, and out-of-scope items"
-- "write the LLD with full endpoint specs, postgres schema, mlflow
-  registry rules, and module layout"
-- "write the test_plan.md document covering unit, integration, and the
-  retrain-loop end-to-end test"
-- "draft the project submission report from this set of screenshots and
-  map each figure to the rubric"
-- "convert report_submission.md to PDF including all the screenshots"
-- "generate an HLD flowchart and an LLD flowchart for the system and embed
-  them as images in the report and in the design docs"
-- "write a short user manual for the streamlit console covering startup,
-  the four pages, feedback submission, and basic troubleshooting"
-- "based on the fair-use code-of-conduct guidelines, generate an AI
-  declaration statement in the same style as my previous project"
+- "what's the right way to break this AQI MLOps assignment into stages so i
+  can plan the whole pipeline end to end?"
+- "what's the kaggle CLI command to pull the city_day air quality dataset?"
+- "for DVC, is a local remote enough for this assignment or should i set up
+  a gdrive remote?"
+- "how should ingest.py be structured — does it write straight to
+  data/raw/city_day.csv or stage it somewhere first?"
+- "what kind of schema and missingness checks make sense in validate.py and
+  what should the validation_report.json look like?"
+- "for transform.py, what's a sensible order — imputation first, then lag
+  features and rolling means, then target encoding for city?"
+- "do i need a baseline_stats step at all, or can i compute drift baselines
+  on the fly later?"
+- "in the xgboost trainer, which MLflow tags are actually useful at
+  registry time — model_family, git_sha, anything else?"
+- "is a shallow PyTorch MLP a reasonable second family to keep alongside
+  xgboost, or am i over-engineering this?"
+- "what's the cleanest rule for register.py — pick lower val_rmse across
+  both families and archive the previous Production version?"
+- "which endpoints does FastAPI actually need for this rubric — is
+  /health, /ready, /predict, /ground-truth, /stats, /feedback,
+  /feedback.csv, /metrics enough?"
+- "what's the cleanest way to keep ModelLoader as a singleton in FastAPI
+  without lifespan getting weird?"
+- "for the predictions table, is JSONB for input_features a good idea or
+  should i flatten the columns?"
+- "is PSI per feature the standard drift metric here, or should i be
+  looking at KS or wasserstein instead?"
+- "for the retrain trigger, is count-AND-RMSE plus an independent PSI gate
+  too aggressive or about right?"
+- "is it correct to merge feedback at the raw-CSV layer rather than
+  post-features, so the same transform pipeline handles both?"
+- "what's the right DAG shape for data_pipeline — ingest → validate →
+  feature_engineer, or do i split feature engineering further?"
+- "for training_pipeline, can train_xgboost and train_pytorch_nn run as
+  parallel tasks before register_best_model?"
+- "how do i wire TriggerDagRunOperator from drift_monitor into
+  training_pipeline cleanly, and what's a reasonable cooldown?"
+- "for the streamlit side, is one page per concern (Home / Predict /
+  Feedback / Pipeline) the right split, or am i overdoing it?"
+- "what services do i actually need in docker-compose for this rubric —
+  api, frontend, airflow, mlflow, postgres, prometheus, grafana,
+  pushgateway?"
+- "the API container can't reach mlflow — what hostname and port should it
+  use inside the compose network?"
+- "MLflow artifact_root looks broken inside the container — is the named
+  volume mount wrong?"
+- "_git_sha is throwing PermissionError inside the airflow container — why
+  does that happen and how should it fall back?"
+- "Airflow email_on_failure isn't firing — what's the right SMTP config
+  for mailtrap?"
+- "is there a clean way to verify mailtrap actually receives Airflow alert
+  emails without waiting for a real failure?"
+- "with prometheus_fastapi_instrumentator, what custom gauges make sense
+  on top of the defaults — rolling_rmse_24h, predictions_total by
+  model_version?"
+- "what should the prometheus alert rules look like for
+  HighInferenceLatencyP95 and ModelDriftDetected?"
+- "what's a sensible Grafana dashboard layout for this project —
+  predictions/sec, latency, rolling RMSE, predictions by model version?"
+- "for the unit tests, which behaviours in transform.py, drift.py, and
+  dataset.py are worth pinning down?"
+- "for integration tests against the live /predict and /ground-truth
+  endpoints, is it ok to skip them when the API isn't up?"
+- "what should an architecture diagram description and an HLD actually
+  cover for this rubric — success metrics, design choices, NFRs,
+  out-of-scope?"
+- "for the LLD, how detailed should the endpoint specs and the postgres
+  schema be?"
+- "what does a good test_plan.md look like — unit, integration, and the
+  retrain-loop end-to-end test?"
+- "given this set of screenshots, how should the project submission
+  report be structured so each figure maps cleanly to a rubric item?"
+- "what's the simplest local way to convert a markdown report with all
+  these screenshots into a PDF?"
+- "for HLD/LLD flowcharts, what's the cleanest way to render mermaid
+  diagrams as static images and embed them in the report and design docs?"
