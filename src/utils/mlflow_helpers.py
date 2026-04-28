@@ -26,7 +26,7 @@ def _git_sha() -> str:
             stderr=subprocess.DEVNULL,
         )
         return out.decode().strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError, PermissionError, OSError):
         return "unknown"
 
 
